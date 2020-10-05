@@ -7,15 +7,86 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B37556B2252BDCBE0031F50A /* VoodooSMBus.xcodeproj in Frameworks */ = {isa = PBXBuildFile; fileRef = B3B79E56252BC9B300E19884 /* VoodooSMBus.xcodeproj */; };
 		B3B79E3D252BB36100E19884 /* ELANTouchpadDriver.hpp in Headers */ = {isa = PBXBuildFile; fileRef = B3B79E3B252BB36100E19884 /* ELANTouchpadDriver.hpp */; };
 		B3B79E3E252BB36100E19884 /* ELANTouchpadDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B3B79E3C252BB36100E19884 /* ELANTouchpadDriver.cpp */; };
+		B3B79E4D252BB87200E19884 /* helpers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B3B79E4B252BB87200E19884 /* helpers.cpp */; };
+		B3B79E4E252BB87200E19884 /* helpers.hpp in Headers */ = {isa = PBXBuildFile; fileRef = B3B79E4C252BB87200E19884 /* helpers.hpp */; };
+		B3B79E70252BCA3400E19884 /* VoodooInput.kext in CopyFiles */ = {isa = PBXBuildFile; fileRef = B3B79E65252BCA1E00E19884 /* VoodooInput.kext */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B3B79E71252BCA3800E19884 /* VoodooTrackpoint.kext in CopyFiles */ = {isa = PBXBuildFile; fileRef = B3B79E6B252BCA2800E19884 /* VoodooTrackpoint.kext */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B3B79E72252BCA6E00E19884 /* VoodooSMBus.kext in CopyFiles */ = {isa = PBXBuildFile; fileRef = B3B79E5B252BC9B300E19884 /* VoodooSMBus.kext */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B3B79E5A252BC9B300E19884 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B3B79E56252BC9B300E19884 /* VoodooSMBus.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = B3953FF922D8DBC100473323;
+			remoteInfo = VoodooSMBus;
+		};
+		B3B79E5C252BC9B900E19884 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B3B79E56252BC9B300E19884 /* VoodooSMBus.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = B3953FF822D8DBC100473323;
+			remoteInfo = VoodooSMBus;
+		};
+		B3B79E64252BCA1E00E19884 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B3B79E60252BCA1D00E19884 /* VoodooInput.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 7BBAB1F922E3A2F800B2941A;
+			remoteInfo = VoodooInput;
+		};
+		B3B79E6A252BCA2800E19884 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B3B79E66252BCA2800E19884 /* VoodooTrackpoint.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = B33179B224AA310A00200168;
+			remoteInfo = VoodooTrackpoint;
+		};
+		B3B79E6C252BCA2D00E19884 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B3B79E66252BCA2800E19884 /* VoodooTrackpoint.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = B33179B124AA310A00200168;
+			remoteInfo = VoodooTrackpoint;
+		};
+		B3B79E6E252BCA3000E19884 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B3B79E60252BCA1D00E19884 /* VoodooInput.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 7BBAB1F822E3A2F800B2941A;
+			remoteInfo = VoodooInput;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B3B79E5E252BC9D400E19884 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B3B79E72252BCA6E00E19884 /* VoodooSMBus.kext in CopyFiles */,
+				B3B79E71252BCA3800E19884 /* VoodooTrackpoint.kext in CopyFiles */,
+				B3B79E70252BCA3400E19884 /* VoodooInput.kext in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		B3B79E2E252BB08D00E19884 /* VoodooElan.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoodooElan.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3B79E35252BB08D00E19884 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B3B79E3B252BB36100E19884 /* ELANTouchpadDriver.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ELANTouchpadDriver.hpp; sourceTree = "<group>"; };
 		B3B79E3C252BB36100E19884 /* ELANTouchpadDriver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ELANTouchpadDriver.cpp; sourceTree = "<group>"; };
+		B3B79E4B252BB87200E19884 /* helpers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = helpers.cpp; sourceTree = "<group>"; };
+		B3B79E4C252BB87200E19884 /* helpers.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = helpers.hpp; sourceTree = "<group>"; };
+		B3B79E56252BC9B300E19884 /* VoodooSMBus.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = VoodooSMBus.xcodeproj; path = Dependencies/VoodooSMBus/VoodooSMBus.xcodeproj; sourceTree = "<group>"; };
+		B3B79E60252BCA1D00E19884 /* VoodooInput.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = VoodooInput.xcodeproj; path = Dependencies/VoodooInput/VoodooInput.xcodeproj; sourceTree = "<group>"; };
+		B3B79E66252BCA2800E19884 /* VoodooTrackpoint.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = VoodooTrackpoint.xcodeproj; path = Dependencies/VoodooTrackpoint/VoodooTrackpoint.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -23,17 +94,29 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B37556B2252BDCBE0031F50A /* VoodooSMBus.xcodeproj in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B37556B0252BDC730031F50A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B3B79E24252BB08D00E19884 = {
 			isa = PBXGroup;
 			children = (
+				B3B79E66252BCA2800E19884 /* VoodooTrackpoint.xcodeproj */,
+				B3B79E60252BCA1D00E19884 /* VoodooInput.xcodeproj */,
+				B3B79E56252BC9B300E19884 /* VoodooSMBus.xcodeproj */,
 				B3B79E30252BB08D00E19884 /* VoodooElan */,
 				B3B79E2F252BB08D00E19884 /* Products */,
+				B37556B0252BDC730031F50A /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -51,8 +134,34 @@
 				B3B79E3C252BB36100E19884 /* ELANTouchpadDriver.cpp */,
 				B3B79E3B252BB36100E19884 /* ELANTouchpadDriver.hpp */,
 				B3B79E35252BB08D00E19884 /* Info.plist */,
+				B3B79E4B252BB87200E19884 /* helpers.cpp */,
+				B3B79E4C252BB87200E19884 /* helpers.hpp */,
 			);
 			path = VoodooElan;
+			sourceTree = "<group>";
+		};
+		B3B79E57252BC9B300E19884 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B3B79E5B252BC9B300E19884 /* VoodooSMBus.kext */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B3B79E61252BCA1D00E19884 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B3B79E65252BCA1E00E19884 /* VoodooInput.kext */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B3B79E67252BCA2800E19884 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B3B79E6B252BCA2800E19884 /* VoodooTrackpoint.kext */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -63,6 +172,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B3B79E3D252BB36100E19884 /* ELANTouchpadDriver.hpp in Headers */,
+				B3B79E4E252BB87200E19884 /* helpers.hpp in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,10 +187,14 @@
 				B3B79E2A252BB08D00E19884 /* Sources */,
 				B3B79E2B252BB08D00E19884 /* Frameworks */,
 				B3B79E2C252BB08D00E19884 /* Resources */,
+				B3B79E5E252BC9D400E19884 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B3B79E6F252BCA3000E19884 /* PBXTargetDependency */,
+				B3B79E6D252BCA2D00E19884 /* PBXTargetDependency */,
+				B3B79E5D252BC9B900E19884 /* PBXTargetDependency */,
 			);
 			name = VoodooElan;
 			productName = VoodooElan;
@@ -111,12 +225,50 @@
 			mainGroup = B3B79E24252BB08D00E19884;
 			productRefGroup = B3B79E2F252BB08D00E19884 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = B3B79E61252BCA1D00E19884 /* Products */;
+					ProjectRef = B3B79E60252BCA1D00E19884 /* VoodooInput.xcodeproj */;
+				},
+				{
+					ProductGroup = B3B79E57252BC9B300E19884 /* Products */;
+					ProjectRef = B3B79E56252BC9B300E19884 /* VoodooSMBus.xcodeproj */;
+				},
+				{
+					ProductGroup = B3B79E67252BCA2800E19884 /* Products */;
+					ProjectRef = B3B79E66252BCA2800E19884 /* VoodooTrackpoint.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				B3B79E2D252BB08D00E19884 /* VoodooElan */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		B3B79E5B252BC9B300E19884 /* VoodooSMBus.kext */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = VoodooSMBus.kext;
+			remoteRef = B3B79E5A252BC9B300E19884 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B3B79E65252BCA1E00E19884 /* VoodooInput.kext */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = VoodooInput.kext;
+			remoteRef = B3B79E64252BCA1E00E19884 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B3B79E6B252BCA2800E19884 /* VoodooTrackpoint.kext */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = VoodooTrackpoint.kext;
+			remoteRef = B3B79E6A252BCA2800E19884 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		B3B79E2C252BB08D00E19884 /* Resources */ = {
@@ -133,11 +285,30 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3B79E4D252BB87200E19884 /* helpers.cpp in Sources */,
 				B3B79E3E252BB36100E19884 /* ELANTouchpadDriver.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B3B79E5D252BC9B900E19884 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = VoodooSMBus;
+			targetProxy = B3B79E5C252BC9B900E19884 /* PBXContainerItemProxy */;
+		};
+		B3B79E6D252BCA2D00E19884 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = VoodooTrackpoint;
+			targetProxy = B3B79E6C252BCA2D00E19884 /* PBXContainerItemProxy */;
+		};
+		B3B79E6F252BCA3000E19884 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = VoodooInput;
+			targetProxy = B3B79E6E252BCA3000E19884 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B3B79E36252BB08D00E19884 /* Debug */ = {

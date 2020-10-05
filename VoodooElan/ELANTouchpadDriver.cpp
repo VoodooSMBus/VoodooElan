@@ -45,13 +45,6 @@ bool ELANTouchpadDriver::init(OSDictionary *dict) {
     
     data = reinterpret_cast<elan_tp_data*>(IOMalloc(sizeof(elan_tp_data)));
 
-    transducers = OSArray::withCapacity(ETP_MAX_FINGERS);
-
-    DigitiserTransducerType type = kDigitiserTransducerFinger;
-    for (int i = 0; i < ETP_MAX_FINGERS; i++) {
-        VoodooI2CDigitiserTransducer* transducer = VoodooI2CDigitiserTransducer::transducer(type, NULL);
-        transducers->setObject(transducer);
-    }
     awake = true;
     trackpointScrolling = false;
     return result;
@@ -64,20 +57,6 @@ void ELANTouchpadDriver::free(void) {
 
 void ELANTouchpadDriver::releaseResources() {
     sendSleepCommand();
-    OSSafeReleaseNULL(device_nub);
-    
-    if (transducers) {
-        for (int i = 0; i < transducers->getCount(); i++) {
-            OSObject* object = transducers->getObject(i);
-            OSSafeReleaseNULL(object);
-        }
-    }
-    
-    OSSafeReleaseNULL(transducers);
-    unpublishMultitouchInterface();
-    OSSafeReleaseNULL(mt_interface);
-    unpublishTrackpoint();
-    OSSafeReleaseNULL(trackpoint);
 }
 
 bool ELANTouchpadDriver::start(IOService* provider) {
@@ -86,11 +65,10 @@ bool ELANTouchpadDriver::start(IOService* provider) {
     }
     PMinit();
     provider->joinPMtree(this);
-    registerPowerDriver(this, VoodooI2CIOPMPowerStates, kVoodooI2CIOPMNumberPowerStates);
+    registerPowerDriver(this, VoodooSMBusPowerStates, kVoodooSMBusPowerStates);
     
+    device_nub->wakeupController();
     device_nub->setSlaveDeviceFlags(I2C_CLIENT_HOST_NOTIFY);
-    publishMultitouchInterface();
-    publishTrackpoint();
     setDeviceParameters();
     
     int error = tryInitialize();
@@ -146,69 +124,35 @@ IOReturn ELANTouchpadDriver::setPowerState(unsigned long whichState, IOService* 
     return kIOPMAckImplied;
 }
 
-bool ELANTouchpadDriver::publishMultitouchInterface() {
-    mt_interface = OSTypeAlloc(VoodooI2CMultitouchInterface);
-    if (!mt_interface) {
-        IOLogError("No memory to allocate VoodooI2CMultitouchInterface instance\n");
-        goto multitouch_exit;
+bool ELANTouchpadDriver::handleOpen(IOService *forClient, IOOptionBits options, void *arg) {
+    if (forClient && forClient->getProperty(VOODOO_INPUT_IDENTIFIER)) {
+        voodooInputInstance = forClient;
+        voodooInputInstance->retain();
+        return true;
     }
-    if (!mt_interface->init(NULL)) {
-        IOLogError("Failed to init multitouch interface\n");
-        goto multitouch_exit;
+    
+    if (forClient && forClient->getProperty(VOODOO_TRACKPOINT_IDENTIFIER)) {
+        voodooTrackpointInstance = forClient;
+        voodooTrackpointInstance->retain();
+        return true;
     }
-    if (!mt_interface->attach(this)) {
-        IOLogError("Failed to attach multitouch interface\n");
-        goto multitouch_exit;
-    }
-    if (!mt_interface->start(this)) {
-        IOLogError("Failed to start multitouch interface\n");
-        goto multitouch_exit;
-    }
-    // Assume we are a touchpad
-    mt_interface->setProperty(kIOHIDDisplayIntegratedKey, false);
-    mt_interface->registerService();
-    return true;
-multitouch_exit:
-    unpublishMultitouchInterface();
-    return false;
-}
-void ELANTouchpadDriver::unpublishMultitouchInterface() {
-    if (mt_interface) {
-        mt_interface->stop(this);
-    }
+    
+    return super::handleOpen(forClient, options, arg);
 }
 
-bool ELANTouchpadDriver::publishTrackpoint() {
-    trackpoint = OSTypeAlloc(TrackpointDevice);
-    if (!trackpoint) {
-        IOLogError("No memory to allocate TrackpointDevice instance\n");
-        goto trackpoint_exit;
-    }
-    if (!trackpoint->init(NULL)) {
-        IOLogError("Failed to init TrackpointDevice\n");
-        goto trackpoint_exit;
-    }
-    if (!trackpoint->attach(this)) {
-        IOLogError("Failed to attach TrackpointDevice\n");
-        goto trackpoint_exit;
-    }
-    if (!trackpoint->start(this)) {
-        IOLogError("Failed to start TrackpointDevice \n");
-        goto trackpoint_exit;
-    }
-  
-    trackpoint->registerService();
-    return true;
-trackpoint_exit:
-    unpublishTrackpoint();
-    return false;
-}
-void ELANTouchpadDriver::unpublishTrackpoint() {
-    if (trackpoint) {
-        trackpoint->stop(this);
-    }
+bool ELANTouchpadDriver::handleIsOpen(const IOService *forClient) const {
+    return (forClient == voodooInputInstance) || (forClient == voodooTrackpointInstance);
 }
 
+void ELANTouchpadDriver::handleClose(IOService *forClient, IOOptionBits options) {
+    if (forClient == voodooInputInstance) {
+        OSSafeReleaseNULL(voodooInputInstance);
+    }
+    if (forClient == voodooTrackpointInstance) {
+        OSSafeReleaseNULL(voodooTrackpointInstance);
+    }
+    super::handleClose(forClient, options);
+}
 
 
 int ELANTouchpadDriver::tryInitialize() {
@@ -327,13 +271,14 @@ bool ELANTouchpadDriver::setDeviceParameters() {
     
     data->x_res = convertResolution(hw_x_res);
     data->y_res = convertResolution(hw_y_res);
-    
-    mt_interface->physical_max_x =  data->max_x * 10 / data->x_res;
-    mt_interface->physical_max_y = data->max_y * 10 / data->y_res;
-    mt_interface->logical_max_x = data->max_x;
-    mt_interface->logical_max_y = data->max_y;
-    
 
+    setProperty(VOODOO_INPUT_LOGICAL_MAX_X_KEY, data->max_x, 16);
+    setProperty(VOODOO_INPUT_LOGICAL_MAX_Y_KEY, data->max_y, 16);
+    setProperty(VOODOO_INPUT_PHYSICAL_MAX_X_KEY, data->max_x * 10 / data->x_res, 16);
+    setProperty(VOODOO_INPUT_PHYSICAL_MAX_Y_KEY, data->max_y * 10 / data->y_res, 16);
+    
+    setProperty(VOODOO_INPUT_TRANSFORM_KEY, 0ull, 8);
+    
     return true;
 }
 
@@ -400,19 +345,46 @@ void ELANTouchpadDriver::reportTrackpoint(u8 *report) {
         trackpointScrolling = false;
     }
     
+    AbsoluteTime timestamp;
+    clock_get_uptime(&timestamp);
+    
     if(trackpointScrolling) {
-        trackpoint->updateScrollwheel(-y, -x, 0);
+        scrollEvent.deltaAxis1 = -y;
+        scrollEvent.deltaAxis2 = -x;
+        scrollEvent.deltaAxis3 = 0;
+        scrollEvent.timestamp = timestamp;
+        messageClient(kIOMessageVoodooTrackpointScrollWheel, voodooTrackpointInstance, &scrollEvent, sizeof(ScrollWheelEvent));
     } else {
-        trackpoint->updateRelativePointer(x, y, button);
+        relativeEvent.buttons = button;
+        relativeEvent.timestamp = timestamp;
+        relativeEvent.dx = x;
+        relativeEvent.dy = y;
+        messageClient(kIOMessageVoodooTrackpointRelativePointer, voodooTrackpointInstance, &relativeEvent, sizeof(RelativePointerEvent));
     }
 }
 
 // elan_report_contact
-void ELANTouchpadDriver::reportContact(VoodooI2CDigitiserTransducer* transducer, bool contact_valid, u8 *finger_data, AbsoluteTime timestamp) {
+void ELANTouchpadDriver::processContact(int finger_id, bool contact_valid, bool physical_button_down, u8 *finger_data, AbsoluteTime timestamp) {
     unsigned int pos_x, pos_y;
     unsigned int pressure, mk_x, mk_y;
     unsigned int area_x, area_y, major, minor;
     unsigned int scaled_pressure;
+    
+    auto& transducer = touchInputEvent.transducers[finger_id];
+    
+    
+    transducer.secondaryId = finger_id;
+    //transducer->logical_max_x = mt_interface->logical_max_x;
+    //transducer->logical_max_y = mt_interface->logical_max_y;
+    
+    //transducer.isPhysicalButtonDown = tp_info & BIT(0);
+    //transducer->physical_button.update(tp_info & BIT(0), timestamp);
+    
+    
+    transducer.type = FINGER;
+    //transducer->type = kDigitiserTransducerFinger;
+    transducer.isValid = contact_valid;
+    transducer.timestamp = timestamp;
 
     
     if (contact_valid) {
@@ -426,7 +398,7 @@ void ELANTouchpadDriver::reportContact(VoodooI2CDigitiserTransducer* transducer,
         
         if (pos_x > data->max_x || pos_y > data->max_y) {
             IOLogDebug("[%d] x=%d y=%d over max (%d, %d)",
-                    transducer->id, pos_x, pos_y,
+                    transducer.secondaryId, pos_x, pos_y,
                     data->max_x, data->max_y);
             return;
         }
@@ -446,14 +418,20 @@ void ELANTouchpadDriver::reportContact(VoodooI2CDigitiserTransducer* transducer,
         if (scaled_pressure > ETP_MAX_PRESSURE)
             scaled_pressure = ETP_MAX_PRESSURE;
         
-        transducer->coordinates.x.update(pos_x, timestamp);
-        transducer->coordinates.y.update(transducer->logical_max_y - pos_y, timestamp);
-        transducer->tip_switch.update(1, timestamp);
+        transducer.previousCoordinates = transducer.currentCoordinates;
+        
+        transducer.currentCoordinates.x = pos_x;
+        transducer.currentCoordinates.y = pos_y;
+        
+       // TODO
+       // transducer->tip_switch.update(1, timestamp);
 
     } else {
-        transducer->coordinates.x.update(transducer->coordinates.x.last.value, timestamp);
-        transducer->coordinates.y.update(transducer->coordinates.y.last.value, timestamp);
-        transducer->tip_switch.update(0, timestamp);
+        transducer.currentCoordinates.x = transducer.previousCoordinates.x;
+        transducer.currentCoordinates.y = transducer.previousCoordinates.y;
+        // TODO
+
+        //transducer->tip_switch.update(0, timestamp);
     }
 }
 
@@ -462,41 +440,30 @@ void ELANTouchpadDriver::reportAbsolute(u8 *packet) {
     u8 *finger_data = &packet[ETP_FINGER_DATA_OFFSET];
     int i;
     u8 tp_info = packet[ETP_TOUCH_INFO_OFFSET];
-    u8 hover_info = packet[ETP_HOVER_INFO_OFFSET];
-    bool contact_valid, hover_event;
+    //u8 hover_info = packet[ETP_HOVER_INFO_OFFSET];
+    bool contact_valid, physical_button_down;
+    //hover_event;
     
-    VoodooI2CMultitouchEvent event;
-    event.contact_count = 0;
-    event.transducers = transducers;
-
     AbsoluteTime timestamp;
     clock_get_uptime(&timestamp);
     
-    hover_event = hover_info & 0x40;
+    touchInputEvent.contact_count = 0;
+    touchInputEvent.timestamp = timestamp;
+    
+    //hover_event = hover_info & 0x40;
     for (i = 0; i < ETP_MAX_FINGERS; i++) {
         contact_valid = tp_info & (1U << (3 + i));
+        physical_button_down = tp_info & BIT(0);
         
-        VoodooI2CDigitiserTransducer* transducer = OSDynamicCast(VoodooI2CDigitiserTransducer,
-                                                                 transducers->getObject(i));
-
-        transducer->id = i;
-        transducer->secondary_id = i;
-        transducer->logical_max_x = mt_interface->logical_max_x;
-        transducer->logical_max_y = mt_interface->logical_max_y;
-        transducer->physical_button.update(tp_info & BIT(0), timestamp);
-        transducer->type = kDigitiserTransducerFinger;
-        transducer->is_valid = contact_valid;
-        
-        reportContact(transducer, contact_valid, finger_data, timestamp);
+        processContact(i, contact_valid, physical_button_down, finger_data, timestamp);
         
         if (contact_valid) {
             finger_data += ETP_FINGER_DATA_LEN;
-            event.contact_count++;
+            touchInputEvent.contact_count++;
         }
     }
    
-    // send the event into the multitouch interface
-    mt_interface->handleInterruptReport(event, timestamp);
+    messageClient(kIOMessageVoodooInputMessage, voodooInputInstance, &touchInputEvent, sizeof(VoodooInputEvent));
 }
 
 void ELANTouchpadDriver::sendSleepCommand() {

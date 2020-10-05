@@ -30,13 +30,12 @@
 #include <IOKit/IOService.h>
 #include <IOKit/IOCommandGate.h>
 #include <IOKit/acpi/IOACPIPlatformDevice.h>
-#include "i2c_smbus.h"
 #include "helpers.hpp"
-#include "TrackpointDevice.hpp"
-#include "Configuration.hpp"
-#include "../Dependencies/VoodooI2C/Multitouch Support/VoodooI2CMultitouchInterface.hpp"
-#include "VoodooSMBusDeviceNub.hpp"
-#include "VoodooSMBusControllerDriver.hpp"
+#include "../Dependencies/VoodooSMBus/VoodooSMBus/Configuration.hpp"
+#include "../Dependencies/VoodooSMBus/VoodooSMBus/VoodooSMBusDeviceNub.hpp"
+#include "../Dependencies/VoodooSMBus/VoodooSMBus/VoodooSMBusControllerDriver.hpp"
+#include "../Dependencies/VoodooTrackpoint/VoodooTrackpoint/VoodooTrackpointMessages.h"
+#include "../Dependencies/VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputMessages.h"
 
 /* https://github.com/torvalds/linux/blob/master/drivers/input/mouse/elan_i2c.h */
 #define ETP_ENABLE_ABS                      0x0001
@@ -125,13 +124,23 @@ public:
     bool init(OSDictionary *dict) override;
     void free(void) override;
     IOReturn setPowerState(unsigned long whichState, IOService* whatDevice) override;
-
+    void handleClose(IOService *forClient, IOOptionBits options) override;
+    virtual bool handleIsOpen(const IOService *forClient) const override;
+    bool handleOpen(IOService *forClient, IOOptionBits options, void *arg) override;
+    
 private:
     void loadConfiguration();
+    
+    IOService *voodooInputInstance {nullptr};
+    IOService *voodooTrackpointInstance {nullptr};
+    
+    
+    RelativePointerEvent relativeEvent {};
+    ScrollWheelEvent scrollEvent {};
+    
+    VoodooInputEvent touchInputEvent {};
+    
     VoodooSMBusDeviceNub* device_nub;
-    VoodooI2CMultitouchInterface *mt_interface;
-    TrackpointDevice *trackpoint;
-    OSArray* transducers;
     elan_tp_data* data;
     bool awake;
     bool trackpointScrolling;
@@ -153,11 +162,6 @@ private:
     uint64_t ts_last_trackpoint = 0;
 
     void releaseResources();
-    void unpublishMultitouchInterface();
-    bool publishMultitouchInterface();
-    
-    void unpublishTrackpoint();
-    bool publishTrackpoint();
 
     /* ELAN device functions */
     int tryInitialize();
@@ -167,9 +171,14 @@ private:
     static unsigned int convertResolution(u8 val);
     int setMode(u8 mode);
     bool setDeviceParameters();
-    void reportContact(VoodooI2CDigitiserTransducer* transducer, bool contact_valid, u8 *finger_data, AbsoluteTime timestamp);
+    
+    
+    void processContact(int finger_id, bool contact_valid, bool physical_button_down, u8 *finger_data, AbsoluteTime timestamp);
     void reportAbsolute(u8 *packet);
     void sendSleepCommand();
+    
+    
+    
     
     /*
      * Called by ApplePS2Controller to notify of keyboard interactions
@@ -179,7 +188,7 @@ private:
      *
      * @return kIOSuccess if the message is processed
      */
-    virtual IOReturn message(UInt32 type, IOService* provider, void* argument);
+    virtual IOReturn message(UInt32 type, IOService* provider, void* argument) override;
 };
 
 #endif /* ELANTouchpadDriver_hpp */
