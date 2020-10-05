@@ -1,0 +1,9 @@
+[submodule "Dependencies/VoodooSMBus"]
+	path = Dependencies/VoodooSMBus
+	url = git@github.com:VoodooSMBus/VoodooSMBus.git
+[submodule "Dependencies/VoodooTrackpoint"]
+	path = Dependencies/VoodooTrackpoint
+	url = git@github.com:VoodooSMBus/VoodooTrackpoint.git
+[submodule "Dependencies/VoodooInput"]
+	path = Dependencies/VoodooInput
+	url = git@github.com:acidanthera/VoodooInput.git
