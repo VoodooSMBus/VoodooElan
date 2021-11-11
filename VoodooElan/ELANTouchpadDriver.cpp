@@ -63,6 +63,13 @@ bool ELANTouchpadDriver::start(IOService* provider) {
     if (!super::start(provider)) {
         return false;
     }
+    
+    if (device_nub->getDeviceProps()) {
+        vps2Control = true;
+    } else {
+        IOSleep(3000);
+    }
+    
     PMinit();
     provider->joinPMtree(this);
     registerPowerDriver(this, ELANPowerStates, 2);
@@ -112,8 +119,9 @@ IOReturn ELANTouchpadDriver::setPowerState(unsigned long whichState, IOService* 
             sendSleepCommand();
         }
     } else {
-        if (!awake) {
+        if (!awake && !vps2Control) {
             IOLogDebug("ELANTouchpadDriver waking up");
+            IOSleep(3000);
             int error = tryInitialize();
             if(error) {
                 IOLogError("Could not initialize ELAN device.");
@@ -145,7 +153,6 @@ void ELANTouchpadDriver::handleClose(IOService *forClient, IOOptionBits options)
 
 
 int ELANTouchpadDriver::tryInitialize() {
-    IOSleep(3000);
     int repeat = ETP_RETRY_COUNT;
     int error;
     do {
@@ -494,6 +501,14 @@ IOReturn ELANTouchpadDriver::message(UInt32 type, IOService* provider, void* arg
             handleHostNotify();
             break;
         }
+        case kPS2C_wakeCompleted:
+            IOLogInfo("PS2 Wake Signal");
+            if (tryInitialize() != 0) {
+                IOLogError("Failed to wake up");
+            }
+            
+            awake = true;
+            break;
     }
     
     return kIOReturnSuccess;

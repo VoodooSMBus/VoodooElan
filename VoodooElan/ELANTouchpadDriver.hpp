@@ -93,6 +93,12 @@
 #define I2C_CLIENT_HOST_NOTIFY 0x40
 #define I2C_SMBUS_MAX_LEN 32
 
+
+enum {
+    kPS2C_wakeCompleted = iokit_vendor_specific_msg(301),       // PS2 Wakeup completed
+};
+    
+
 struct elan_tp_data {
     unsigned int        max_x;
     unsigned int        max_y;
@@ -141,6 +147,7 @@ private:
     elan_tp_data* data;
     bool awake;
     bool trackpointScrolling;
+    bool vps2Control {false};
     
     static constexpr const char* CONFIG_DISABLE_WHILE_TYPING = "DisableWhileTyping";
     static constexpr const char* CONFIG_DISABLE_WHILE_TRACKPOINT = "DisableWhileTrackpoint";
