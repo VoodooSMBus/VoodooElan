@@ -29,12 +29,10 @@
 #include <IOKit/IOKitKeys.h>
 #include <IOKit/IOService.h>
 #include <IOKit/IOCommandGate.h>
-#include <IOKit/acpi/IOACPIPlatformDevice.h>
 #include "helpers.hpp"
 #include "../Dependencies/VoodooSMBus/VoodooSMBus/Configuration.hpp"
 #include "../Dependencies/VoodooSMBus/VoodooSMBus/VoodooSMBusDeviceNub.hpp"
-#include "../Dependencies/VoodooSMBus/VoodooSMBus/VoodooSMBusControllerDriver.hpp"
-#include "../Dependencies/VoodooTrackpoint/VoodooTrackpoint/VoodooTrackpointMessages.h"
+#include "../Dependencies/VoodooSMBus/VoodooSMBus/HostNotifyMessage.h"
 #include "../Dependencies/VoodooInput/VoodooInput/VoodooInputMultitouch/VoodooInputMessages.h"
 
 /* https://github.com/torvalds/linux/blob/master/drivers/input/mouse/elan_i2c.h */
@@ -92,6 +90,9 @@
 #define ETP_HOVER_INFO_OFFSET               30
 #define ETP_MAX_REPORT_LEN                  34
 
+#define I2C_CLIENT_HOST_NOTIFY 0x40
+#define I2C_SMBUS_MAX_LEN 32
+
 struct elan_tp_data {
     unsigned int        max_x;
     unsigned int        max_y;
@@ -125,19 +126,15 @@ public:
     void free(void) override;
     IOReturn setPowerState(unsigned long whichState, IOService* whatDevice) override;
     void handleClose(IOService *forClient, IOOptionBits options) override;
-    virtual bool handleIsOpen(const IOService *forClient) const override;
     bool handleOpen(IOService *forClient, IOOptionBits options, void *arg) override;
     
 private:
     void loadConfiguration();
     
     IOService *voodooInputInstance {nullptr};
-    IOService *voodooTrackpointInstance {nullptr};
-    
     
     RelativePointerEvent relativeEvent {};
     ScrollWheelEvent scrollEvent {};
-    
     VoodooInputEvent touchInputEvent {};
     
     VoodooSMBusDeviceNub* device_nub;
@@ -172,13 +169,9 @@ private:
     int setMode(u8 mode);
     bool setDeviceParameters();
     
-    
     void processContact(int finger_id, bool contact_valid, bool physical_button_down, u8 *finger_data, AbsoluteTime timestamp);
     void reportAbsolute(u8 *packet);
     void sendSleepCommand();
-    
-    
-    
     
     /*
      * Called by ApplePS2Controller to notify of keyboard interactions

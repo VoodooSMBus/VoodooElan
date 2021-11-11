@@ -65,7 +65,7 @@ bool ELANTouchpadDriver::start(IOService* provider) {
     }
     PMinit();
     provider->joinPMtree(this);
-    registerPowerDriver(this, VoodooSMBusPowerStates, kVoodooSMBusPowerStates);
+    registerPowerDriver(this, ELANPowerStates, 2);
     
     device_nub->wakeupController();
     device_nub->setSlaveDeviceFlags(I2C_CLIENT_HOST_NOTIFY);
@@ -125,32 +125,21 @@ IOReturn ELANTouchpadDriver::setPowerState(unsigned long whichState, IOService* 
 }
 
 bool ELANTouchpadDriver::handleOpen(IOService *forClient, IOOptionBits options, void *arg) {
-    if (forClient && forClient->getProperty(VOODOO_INPUT_IDENTIFIER)) {
+    if (forClient && forClient->getProperty(VOODOO_INPUT_IDENTIFIER) &&
+        super::handleOpen(forClient, options, arg)) {
         voodooInputInstance = forClient;
         voodooInputInstance->retain();
         return true;
     }
     
-    if (forClient && forClient->getProperty(VOODOO_TRACKPOINT_IDENTIFIER)) {
-        voodooTrackpointInstance = forClient;
-        voodooTrackpointInstance->retain();
-        return true;
-    }
-    
-    return super::handleOpen(forClient, options, arg);
-}
-
-bool ELANTouchpadDriver::handleIsOpen(const IOService *forClient) const {
-    return (forClient == voodooInputInstance) || (forClient == voodooTrackpointInstance);
+    return false;
 }
 
 void ELANTouchpadDriver::handleClose(IOService *forClient, IOOptionBits options) {
     if (forClient == voodooInputInstance) {
         OSSafeReleaseNULL(voodooInputInstance);
     }
-    if (forClient == voodooTrackpointInstance) {
-        OSSafeReleaseNULL(voodooTrackpointInstance);
-    }
+    
     super::handleClose(forClient, options);
 }
 
@@ -195,7 +184,10 @@ void ELANTouchpadDriver::handleHostNotify() {
             // ignore touchpad for specified time after trackpoint usage
             if(disable_while_trackpoint) {
                 if(timestamp_ns - ts_last_trackpoint < disable_while_trackpoint_timeout) {
-                    break;
+                    IOLogDebug("%lld - %lld = %lld < %lld\n", timestamp_ns, ts_last_trackpoint,
+                                                          timestamp_ns - ts_last_trackpoint,
+                               disable_while_trackpoint_timeout);
+//                    break;
                 }
             }
             reportAbsolute(report);
@@ -214,7 +206,7 @@ void ELANTouchpadDriver::handleHostNotify() {
 // elan_smbus_initialize
 int ELANTouchpadDriver::initialize() {
     UInt8 check[ETP_SMBUS_HELLOPACKET_LEN] = { 0x55, 0x55, 0x55, 0x55, 0x55 };
-    UInt8 values[I2C_SMBUS_BLOCK_MAX] = {0};
+    UInt8 values[I2C_SMBUS_MAX_LEN] = {0};
     int len, error;
     
     /* Get hello packet */
@@ -222,7 +214,7 @@ int ELANTouchpadDriver::initialize() {
     
     if (len != ETP_SMBUS_HELLOPACKET_LEN) {
         IOLog("hello packet length fail: %d\n", len);
-        error = len < 0 ? len : -EIO;
+        error = len < 0 ? len : kIOReturnIOError;
         return error;
     }
     
@@ -230,7 +222,7 @@ int ELANTouchpadDriver::initialize() {
     if (memcmp(values, check, ETP_SMBUS_HELLOPACKET_LEN)) {
         IOLog("hello packet fail [%*ph]\n",
                 ETP_SMBUS_HELLOPACKET_LEN, values);
-        return -ENXIO;
+        return -kIOReturnNoDevice;
     }
     
     /* enable tp */
@@ -256,14 +248,32 @@ int ELANTouchpadDriver::setMode(u8 mode) {
     return device_nub->writeBlockData(ETP_SMBUS_IAP_CMD, sizeof(cmd), cmd);
 }
 
-// TODO lets query stuff
 bool ELANTouchpadDriver::setDeviceParameters() {
+    u8 buffer[I2C_SMBUS_MAX_LEN] = {0};
+    if (device_nub->readBlockData(ETP_SMBUS_RANGE_CMD, buffer) < 0) {
+        IOLogError("Failed to read range");
+        return false;
+    }
     
-    u8 hw_x_res = 1, hw_y_res = 1;
-    unsigned int x_traces = 1, y_traces = 1;
+    data->max_x = (0x0f & buffer[0]) << 8 | buffer[1];
+    data->max_y = (0xf0 & buffer[0]) << 4 | buffer[2];
     
-    data->max_x = 3052;
-    data->max_y = 1888;
+    if (device_nub->readBlockData(ETP_SMBUS_RESOLUTION_CMD, buffer) < 0) {
+        IOLogError("Failed to read resolution");
+        return false;
+    }
+    
+    u8 hw_x_res = buffer[1] & 0x0f;
+    u8 hw_y_res = (buffer[1] & 0xf0) >> 4;
+    
+    if (device_nub->readBlockData(ETP_SMBUS_XY_TRACENUM_CMD, buffer) < 0) {
+        IOLogError("Failed to read # traces");
+        return false;
+    }
+    
+    unsigned int x_traces = buffer[1];
+    unsigned int y_traces = buffer[2];
+    
     data->width_x = data->max_x / x_traces;
     data->width_y = data->max_y / y_traces;
     
@@ -274,10 +284,11 @@ bool ELANTouchpadDriver::setDeviceParameters() {
 
     setProperty(VOODOO_INPUT_LOGICAL_MAX_X_KEY, data->max_x, 16);
     setProperty(VOODOO_INPUT_LOGICAL_MAX_Y_KEY, data->max_y, 16);
-    setProperty(VOODOO_INPUT_PHYSICAL_MAX_X_KEY, data->max_x * 10 / data->x_res, 16);
-    setProperty(VOODOO_INPUT_PHYSICAL_MAX_Y_KEY, data->max_y * 10 / data->y_res, 16);
+    setProperty(VOODOO_INPUT_PHYSICAL_MAX_X_KEY, data->max_x * 100 / data->x_res, 16);
+    setProperty(VOODOO_INPUT_PHYSICAL_MAX_Y_KEY, data->max_y * 100 / data->y_res, 16);
     
     setProperty(VOODOO_INPUT_TRANSFORM_KEY, 0ull, 8);
+    setProperty("VoodooInputSupported", kOSBooleanTrue);
     
     return true;
 }
@@ -310,7 +321,7 @@ int ELANTouchpadDriver::getReport(u8 *report)
     if (len != ETP_SMBUS_REPORT_LEN) {
         IOLogError("wrong report length (%d vs %d expected)\n", len,
                    ETP_SMBUS_REPORT_LEN);
-        return -EIO;
+        return -kIOReturnIOError;
     }
     
     return 0;
@@ -353,13 +364,13 @@ void ELANTouchpadDriver::reportTrackpoint(u8 *report) {
         scrollEvent.deltaAxis2 = -x;
         scrollEvent.deltaAxis3 = 0;
         scrollEvent.timestamp = timestamp;
-        messageClient(kIOMessageVoodooTrackpointScrollWheel, voodooTrackpointInstance, &scrollEvent, sizeof(ScrollWheelEvent));
+        messageClient(kIOMessageVoodooTrackpointScrollWheel, voodooInputInstance, &scrollEvent, sizeof(ScrollWheelEvent));
     } else {
         relativeEvent.buttons = button;
         relativeEvent.timestamp = timestamp;
         relativeEvent.dx = x;
         relativeEvent.dy = y;
-        messageClient(kIOMessageVoodooTrackpointRelativePointer, voodooTrackpointInstance, &relativeEvent, sizeof(RelativePointerEvent));
+        messageClient(kIOMessageVoodooTrackpointRelativePointer, voodooInputInstance, &relativeEvent, sizeof(RelativePointerEvent));
     }
 }
 
@@ -372,20 +383,13 @@ void ELANTouchpadDriver::processContact(int finger_id, bool contact_valid, bool 
     
     auto& transducer = touchInputEvent.transducers[finger_id];
     
-    
-    transducer.secondaryId = finger_id;
-    //transducer->logical_max_x = mt_interface->logical_max_x;
-    //transducer->logical_max_y = mt_interface->logical_max_y;
-    
-    //transducer.isPhysicalButtonDown = tp_info & BIT(0);
-    //transducer->physical_button.update(tp_info & BIT(0), timestamp);
-    
-    
     transducer.type = FINGER;
-    //transducer->type = kDigitiserTransducerFinger;
     transducer.isValid = contact_valid;
     transducer.timestamp = timestamp;
-
+    transducer.secondaryId = finger_id;
+    transducer.isPhysicalButtonDown = physical_button_down;
+    transducer.isTransducerActive = true;
+    transducer.supportsPressure = false;
     
     if (contact_valid) {
         pos_x = ((finger_data[0] & 0xf0) << 4) |
@@ -421,17 +425,11 @@ void ELANTouchpadDriver::processContact(int finger_id, bool contact_valid, bool 
         transducer.previousCoordinates = transducer.currentCoordinates;
         
         transducer.currentCoordinates.x = pos_x;
-        transducer.currentCoordinates.y = pos_y;
-        
-       // TODO
-       // transducer->tip_switch.update(1, timestamp);
-
+        transducer.currentCoordinates.y = data->max_y - pos_y;
+        transducer.fingerType = kMT2FingerTypeIndexFinger;
     } else {
         transducer.currentCoordinates.x = transducer.previousCoordinates.x;
         transducer.currentCoordinates.y = transducer.previousCoordinates.y;
-        // TODO
-
-        //transducer->tip_switch.update(0, timestamp);
     }
 }
 
@@ -453,7 +451,7 @@ void ELANTouchpadDriver::reportAbsolute(u8 *packet) {
     //hover_event = hover_info & 0x40;
     for (i = 0; i < ETP_MAX_FINGERS; i++) {
         contact_valid = tp_info & (1U << (3 + i));
-        physical_button_down = tp_info & BIT(0);
+        physical_button_down = tp_info & 1;
         
         processContact(i, contact_valid, physical_button_down, finger_data, timestamp);
         
